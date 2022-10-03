@@ -12315,7 +12315,7 @@
 
       return state;
     }
-    /**FI
+    /**
      * Set hover style (namely "emphasis style") of element.
      * @param el Should not be `zrender/graphic/Group`.
      * @param focus 'self' | 'selfInSeries' | 'series'
@@ -20540,7 +20540,7 @@
         current++;
         return result;
       }
-    }(); ///////////////////////////////////////////////////////////
+    }(); // -----------------------------------------------------------------------------
     // For stream debug (Should be commented out after used!)
     // @usage: printTask(this, 'begin');
     // @usage: printTask(this, null, {someExtraProp});
@@ -33617,14 +33617,97 @@
 
     Scale.registerClass(TimeScale);
 
+    /*
+    * Licensed to the Apache Software Foundation (ASF) under one
+    * or more contributor license agreements.  See the NOTICE file
+    * distributed with this work for additional information
+    * regarding copyright ownership.  The ASF licenses this file
+    * to you under the Apache License, Version 2.0 (the
+    * "License"); you may not use this file except in compliance
+    * with the License.  You may obtain a copy of the License at
+    *
+    *   http://www.apache.org/licenses/LICENSE-2.0
+    *
+    * Unless required by applicable law or agreed to in writing,
+    * software distributed under the License is distributed on an
+    * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+    * KIND, either express or implied.  See the License for the
+    * specific language governing permissions and limitations
+    * under the License.
+    */
+
+
+    /**
+     * AUTO-GENERATED FILE. DO NOT MODIFY.
+     */
+
+    /*
+     * Licensed to the Apache Software Foundation (ASF) under one
+     * or more contributor license agreements.  See the NOTICE file
+     * distributed with this work for additional information
+     * regarding copyright ownership.  The ASF licenses this file
+     * to you under the Apache License, Version 2.0 (the
+     * "License"); you may not use this file except in compliance
+     * with the License.  You may obtain a copy of the License at
+     *
+     *   http://www.apache.org/licenses/LICENSE-2.0
+     *
+     * Unless required by applicable law or agreed to in writing,
+     * software distributed under the License is distributed on an
+     * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+     * KIND, either express or implied.  See the License for the
+     * specific language governing permissions and limitations
+     * under the License.
+     */
+    var _this = undefined;
     var scaleProto = Scale.prototype; // FIXME:TS refactor: not good to call it directly with `this`?
 
     var intervalScaleProto = IntervalScale.prototype;
     var roundingErrorFix = round;
-    var mathFloor = Math.floor;
-    var mathCeil = Math.ceil;
     var mathPow$1 = Math.pow;
     var mathLog = Math.log;
+
+    var getLogTicks = function (_extent, base, _interval) {
+      // Tornem a posar l'extent en format [num, num] (sense log).
+      var start = _extent[0];
+
+      if (start < 0) {
+        _extent[0] = round(-mathPow$1(base, -start) + 1);
+      } else {
+        _extent[0] = round(mathPow$1(base, start) - 1);
+      }
+
+      var end = _extent[1];
+
+      if (end < 0) {
+        _extent[1] = round(-mathPow$1(base, -end) + 1);
+      } else {
+        _extent[1] = round(mathPow$1(base, end) - 1);
+      }
+
+      var ticks = [];
+      var tick = _extent[0];
+
+      while (tick < _extent[1]) {
+        if (ticks.length !== 0) {
+          tick = tick + _interval;
+        }
+
+        ticks.push(tick);
+      } // Tornem a convertir els ticks en log(tick)
+
+
+      ticks = map(ticks, function (tick) {
+        if (tick < 0) {
+          tick = -(mathLog(-tick + 1) / mathLog(base));
+        } else {
+          tick = mathLog(tick + 1) / mathLog(base);
+        }
+
+        return tick;
+      }, _this);
+      return ticks;
+    };
 
     var LogScale =
     /** @class */
@@ -33634,7 +33717,7 @@
       function LogScale() {
         var _this = _super !== null && _super.apply(this, arguments) || this;
 
-        _this.type = 'log';
+        _this.type = "log";
         _this.base = 10;
         _this._originalScale = new IntervalScale(); // FIXME:TS actually used by `IntervalScale`
 
@@ -33651,9 +33734,14 @@
         var extent = this._extent;
         var originalExtent = originalScale.getExtent();
         var ticks = intervalScaleProto.getTicks.call(this, expandToNicedExtent);
-        return map(ticks, function (tick) {
+        return map(getLogTicks(ticks, this.base, this._interval), function (tick) {
           var val = tick.value;
-          var powVal = round(mathPow$1(this.base, val)); // Fix #4158
+          var powVal = round(mathPow$1(this.base, val));
+
+          if (val < 0) {
+            powVal = round(-mathPow$1(this.base, val));
+          } // Fix #4158
+
 
           powVal = val === extent[0] && this._fixMin ? fixRoundingError(powVal, originalExtent[0]) : powVal;
           powVal = val === extent[1] && this._fixMax ? fixRoundingError(powVal, originalExtent[1]) : powVal;
@@ -33666,8 +33754,18 @@
       LogScale.prototype.setExtent = function (start, end) {
         var base = mathLog(this.base); // log(-Infinity) is NaN, so safe guard here
 
-        start = mathLog(Math.max(0, start)) / base;
-        end = mathLog(Math.max(0, end)) / base;
+        if (start < 0) {
+          start = -(mathLog(Math.max(0, start)) / base);
+        } else {
+          start = mathLog(Math.max(0, start)) / base;
+        }
+
+        if (end < 0) {
+          end = -(mathLog(Math.max(0, end)) / base);
+        } else {
+          end = mathLog(Math.max(0, end)) / base;
+        }
+
         intervalScaleProto.setExtent.call(this, start, end);
       };
       /**
@@ -33692,7 +33790,13 @@
         this._originalScale.unionExtent(extent);
 
         var base = this.base;
-        extent[0] = mathLog(extent[0]) / mathLog(base);
+
+        if (extent[0] < 0) {
+          extent[0] = -(mathLog(extent[0]) / mathLog(base));
+        } else {
+          extent[0] = mathLog(extent[0]) / mathLog(base);
+        }
+
         extent[1] = mathLog(extent[1]) / mathLog(base);
         scaleProto.unionExtent.call(this, extent);
       };
@@ -33729,7 +33833,9 @@
           interval *= 10;
         }
 
-        var niceExtent = [round(mathCeil(extent[0] / interval) * interval), round(mathFloor(extent[1] / interval) * interval)];
+        var niceExtent = [//numberUtil.round(mathCeil(extent[0] / interval) * interval),
+        //numberUtil.round(mathFloor(extent[1] / interval) * interval),
+        extent[0], extent[1]];
         this._interval = interval;
         this._niceExtent = niceExtent;
       };
@@ -33759,7 +33865,7 @@
         return mathPow$1(this.base, val);
       };
 
-      LogScale.type = 'log';
+      LogScale.type = "log";
       return LogScale;
     }(Scale);
 
@@ -34020,7 +34126,7 @@
       var ecModel = model.ecModel;
 
       if (ecModel && scaleType === 'time'
-      /*|| scaleType === 'interval' */
+      /* || scaleType === 'interval' */
       ) {
         var barSeriesModels = prepareLayoutBarSeries('bar', ecModel);
         var isBaseAxisAndHasBarSeries_1 = false;
@@ -37770,7 +37876,7 @@
       var stackResultDim = data.getCalculationInfo('stackResultDimension');
 
       if (isDimensionStacked(data, dims[0]
-      /*, dims[1]*/
+      /* , dims[1] */
       )) {
         // jshint ignore:line
         stacked = true;
@@ -37778,7 +37884,7 @@
       }
 
       if (isDimensionStacked(data, dims[1]
-      /*, dims[0]*/
+      /* , dims[0] */
       )) {
         // jshint ignore:line
         stacked = true;
@@ -39916,18 +40022,42 @@
         });
       };
 
-      BaseBarSeriesModel.prototype.getMarkerPosition = function (value) {
+      BaseBarSeriesModel.prototype.getMarkerPosition = function (value, dims, startingAtTick) {
+        if (startingAtTick === void 0) {
+          startingAtTick = false;
+        }
+
         var coordSys = this.coordinateSystem;
 
         if (coordSys && coordSys.clampData) {
           // PENDING if clamp ?
-          var pt = coordSys.dataToPoint(coordSys.clampData(value));
-          var data = this.getData();
-          var offset = data.getLayout('offset');
-          var size = data.getLayout('size');
-          var offsetIndex = coordSys.getBaseAxis().isHorizontal() ? 0 : 1;
-          pt[offsetIndex] += offset + size / 2;
-          return pt;
+          var pt_1 = coordSys.dataToPoint(coordSys.clampData(value));
+
+          if (startingAtTick) {
+            each(coordSys.getAxes(), function (axis, idx) {
+              // If axis type is category, use tick coords instead
+              if (axis.type === 'category') {
+                var tickCoords = axis.getTicksCoords();
+                var tickIdx = coordSys.clampData(value)[idx]; // The index of rightmost tick of markArea is 1 larger than x1/y1 index
+
+                if (dims && (dims[idx] === 'x1' || dims[idx] === 'y1')) {
+                  tickIdx += 1;
+                }
+
+                tickIdx > tickCoords.length - 1 && (tickIdx = tickCoords.length - 1);
+                tickIdx < 0 && (tickIdx = 0);
+                tickCoords[tickIdx] && (pt_1[idx] = axis.toGlobalCoord(tickCoords[tickIdx].coord));
+              }
+            });
+          } else {
+            var data = this.getData();
+            var offset = data.getLayout('offset');
+            var size = data.getLayout('size');
+            var offsetIndex = coordSys.getBaseAxis().isHorizontal() ? 0 : 1;
+            pt_1[offsetIndex] += offset + size / 2;
+          }
+
+          return pt_1;
         }
 
         return [NaN, NaN];
@@ -43631,7 +43761,7 @@
         var axesCount = {
           x: 0,
           y: 0
-        }; /// Create axis
+        }; // Create axis
 
         ecModel.eachComponent('xAxis', createAxisCreator('x'), this);
         ecModel.eachComponent('yAxis', createAxisCreator('y'), this);
@@ -43643,7 +43773,7 @@
           return;
         }
 
-        this._axesMap = axesMap; /// Create cartesian2d
+        this._axesMap = axesMap; // Create cartesian2d
 
         each(axesMap.x, function (xAxis, xAxisIndex) {
           each(axesMap.y, function (yAxis, yAxisIndex) {
