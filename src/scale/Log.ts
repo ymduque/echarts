@@ -4,28 +4,28 @@
  * distributed with this work for additional information
  * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
+ * 'License'); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
  *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * 'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
 
-import * as zrUtil from "zrender/src/core/util";
-import Scale from "./Scale";
-import * as numberUtil from "../util/number";
-import * as scaleHelper from "./helper";
+import * as zrUtil from 'zrender/src/core/util';
+import Scale from './Scale';
+import * as numberUtil from '../util/number';
+import * as scaleHelper from './helper';
 
 // Use some method of IntervalScale
-import IntervalScale from "./Interval";
-import SeriesData from "../data/SeriesData";
-import { DimensionName, ScaleTick } from "../util/types";
+import IntervalScale from './Interval';
+import SeriesData from '../data/SeriesData';
+import { DimensionName, ScaleTick } from '../util/types';
 
 const scaleProto = Scale.prototype;
 // FIXME:TS refactor: not good to call it directly with `this`?
@@ -33,26 +33,26 @@ const intervalScaleProto = IntervalScale.prototype;
 
 const roundingErrorFix = numberUtil.round;
 
-const mathFloor = Math.floor;
-const mathCeil = Math.ceil;
 const mathPow = Math.pow;
 
 const mathLog = Math.log;
 
 const getLogTicks = (_extent: any, base: any, _interval: any) => {
   // Tornem a posar l'extent en format [num, num] (sense log).
-  let start = _extent[0];
+  const start = _extent[0];
   if (start < 0) {
     _extent[0] = numberUtil.round(-mathPow(base, -start) + 1);
-  } else {
+  }
+  else {
     _extent[0] = numberUtil.round(mathPow(base, start) - 1);
   }
 
-  let end = _extent[1];
+  const end = _extent[1];
 
   if (end < 0) {
     _extent[1] = numberUtil.round(-mathPow(base, -end) + 1);
-  } else {
+  }
+  else {
     _extent[1] = numberUtil.round(mathPow(base, end) - 1);
   }
 
@@ -63,7 +63,6 @@ const getLogTicks = (_extent: any, base: any, _interval: any) => {
     if (ticks.length !== 0) {
       tick = tick + _interval;
     }
-
     ticks.push(tick);
   }
 
@@ -73,7 +72,8 @@ const getLogTicks = (_extent: any, base: any, _interval: any) => {
     function (tick) {
       if (tick < 0) {
         tick = -(mathLog(-tick + 1) / mathLog(base));
-      } else {
+      }
+      else {
         tick = mathLog(tick + 1) / mathLog(base);
       }
       return tick;
@@ -85,8 +85,8 @@ const getLogTicks = (_extent: any, base: any, _interval: any) => {
 };
 
 class LogScale extends Scale {
-  static type = "log";
-  readonly type = "log";
+  static type = 'log';
+  readonly type = 'log';
 
   base = 10;
 
@@ -130,7 +130,7 @@ class LogScale extends Scale {
             : powVal;
 
         return {
-          value: powVal,
+          value: powVal
         };
       },
       this
@@ -142,12 +142,14 @@ class LogScale extends Scale {
     // log(-Infinity) is NaN, so safe guard here
     if (start < 0) {
       start = -(mathLog(Math.max(0, start)) / base);
-    } else {
+    }
+    else {
       start = mathLog(Math.max(0, start)) / base;
     }
     if (end < 0) {
       end = -(mathLog(Math.max(0, end)) / base);
-    } else {
+    }
+    else {
       end = mathLog(Math.max(0, end)) / base;
     }
     intervalScaleProto.setExtent.call(this, start, end);
@@ -165,10 +167,8 @@ class LogScale extends Scale {
     // Fix #4158
     const originalScale = this._originalScale;
     const originalExtent = originalScale.getExtent();
-    this._fixMin &&
-      (extent[0] = fixRoundingError(extent[0], originalExtent[0]));
-    this._fixMax &&
-      (extent[1] = fixRoundingError(extent[1], originalExtent[1]));
+    this._fixMin && (extent[0] = fixRoundingError(extent[0], originalExtent[0]));
+    this._fixMax && (extent[1] = fixRoundingError(extent[1], originalExtent[1]));
 
     return extent;
   }
@@ -179,7 +179,8 @@ class LogScale extends Scale {
     const base = this.base;
     if (extent[0] < 0) {
       extent[0] = -(mathLog(extent[0]) / mathLog(base));
-    } else {
+    }
+    else {
       extent[0] = mathLog(extent[0]) / mathLog(base);
     }
 
@@ -215,18 +216,16 @@ class LogScale extends Scale {
 
     // Interval should be integer
     while (
-      !isNaN(interval) &&
-      Math.abs(interval) < 1 &&
-      Math.abs(interval) > 0
+      !isNaN(interval) && Math.abs(interval) < 1 && Math.abs(interval) > 0
     ) {
       interval *= 10;
     }
 
     const niceExtent = [
-      //numberUtil.round(mathCeil(extent[0] / interval) * interval),
-      //numberUtil.round(mathFloor(extent[1] / interval) * interval),
+      // numberUtil.round(mathCeil(extent[0] / interval) * interval),
+      // numberUtil.round(mathFloor(extent[1] / interval) * interval),
       extent[0],
-      extent[1],
+      extent[1]
     ] as [number, number];
 
     this._interval = interval;
@@ -265,8 +264,8 @@ class LogScale extends Scale {
     return mathPow(this.base, val);
   }
 
-  getMinorTicks: IntervalScale["getMinorTicks"];
-  getLabel: IntervalScale["getLabel"];
+  getMinorTicks: IntervalScale['getMinorTicks'];
+  getLabel: IntervalScale['getLabel'];
 }
 
 const proto = LogScale.prototype;
