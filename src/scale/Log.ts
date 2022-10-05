@@ -108,17 +108,13 @@ class LogScale extends Scale {
     const extent = this._extent;
     const originalExtent = originalScale.getExtent();
 
-    const ticks = intervalScaleProto.getTicks.call(this, expandToNicedExtent);
-
     return zrUtil.map(
-      getLogTicks(ticks, this.base, this._interval),
-      function (tick) {
-        const val = tick.value;
-        let powVal = numberUtil.round(mathPow(this.base, val));
+      getLogTicks(originalScale, this.base, this._interval),
+      function (val) {
+        let powVal = numberUtil.round(mathPow(this.base, val) - 1);
         if (val < 0) {
-          powVal = numberUtil.round(-mathPow(this.base, val));
+          powVal = numberUtil.round(-mathPow(this.base, val) + 1);
         }
-
         // Fix #4158
         powVal =
           val === extent[0] && this._fixMin
@@ -138,19 +134,19 @@ class LogScale extends Scale {
   }
 
   setExtent(start: number, end: number): void {
-    const base = mathLog(this.base);
+    const base = this.base;
     // log(-Infinity) is NaN, so safe guard here
     if (start < 0) {
-      start = -(mathLog(Math.max(0, start)) / base);
+      start = -(mathLog(-start + 1) / mathLog(base));
     }
     else {
-      start = mathLog(Math.max(0, start)) / base;
+      start = mathLog(start + 1) / mathLog(base);
     }
     if (end < 0) {
-      end = -(mathLog(Math.max(0, end)) / base);
+      end = -(mathLog(-end + 1) / mathLog(base));
     }
     else {
-      end = mathLog(Math.max(0, end)) / base;
+      end = mathLog(end + 1) / mathLog(base);
     }
     intervalScaleProto.setExtent.call(this, start, end);
   }
@@ -178,13 +174,17 @@ class LogScale extends Scale {
 
     const base = this.base;
     if (extent[0] < 0) {
-      extent[0] = -(mathLog(extent[0]) / mathLog(base));
+      extent[0] = -(mathLog(-extent[0]) / mathLog(base));
     }
     else {
       extent[0] = mathLog(extent[0]) / mathLog(base);
     }
-
-    extent[1] = mathLog(extent[1]) / mathLog(base);
+    if (extent[1] < 0) {
+      extent[1] = -(mathLog(-extent[1]) / mathLog(base));
+    }
+    else {
+      extent[1] = mathLog(extent[1]) / mathLog(base);
+    }
     scaleProto.unionExtent.call(this, extent);
   }
 
@@ -275,6 +275,20 @@ proto.getLabel = intervalScaleProto.getLabel;
 function fixRoundingError(val: number, originalVal: number): number {
   return roundingErrorFix(val, numberUtil.getPrecision(originalVal));
 }
+
+zrUtil.each(['contain', 'normalize'], function (methodName: string) {
+  // @ts-ignore
+  LogScale.prototype[methodName] = function (val: any) {
+      if (val < 0) {
+          val = -(mathLog(-val + 1) / mathLog(this.base));
+      }
+      else {
+          val = mathLog(val + 1) / mathLog(this.base);
+      }
+      // @ts-ignore
+      return this._originalScale[methodName].call(this, val);
+  };
+});
 
 Scale.registerClass(LogScale);
 
