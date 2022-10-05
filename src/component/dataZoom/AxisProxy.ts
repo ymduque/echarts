@@ -296,7 +296,7 @@ class AxisProxy {
             let seriesData = seriesModel.getData();
             const dataDims = seriesData.mapDimensionsAll(axisDim);
 
-            if (!dataDims.length) {
+            if (!dataDims.length || (seriesModel.subType === 'line')) {
                 return;
             }
 

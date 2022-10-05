@@ -103,17 +103,20 @@ class LogScale extends Scale {
   /**
    * @param Whether expand the ticks to niced extent.
    */
-  getTicks(expandToNicedExtent?: boolean): ScaleTick[] {
+  getTicks(): ScaleTick[] {
     const originalScale = this._originalScale;
     const extent = this._extent;
     const originalExtent = originalScale.getExtent();
 
     return zrUtil.map(
-      getLogTicks(originalScale, this.base, this._interval),
+      getLogTicks(originalExtent, this.base, this._interval),
       function (val) {
-        let powVal = numberUtil.round(mathPow(this.base, val) - 1);
+        let powVal:any;
         if (val < 0) {
-          powVal = numberUtil.round(-mathPow(this.base, val) + 1);
+           powVal = numberUtil.round(-mathPow(this.base, -val) + 1);
+        }
+        else {
+           powVal = numberUtil.round(mathPow(this.base, val) - 1);
         }
         // Fix #4158
         powVal =
@@ -148,6 +151,7 @@ class LogScale extends Scale {
     else {
       end = mathLog(end + 1) / mathLog(base);
     }
+    this._originalScale.setExtent(start, end);
     intervalScaleProto.setExtent.call(this, start, end);
   }
 
@@ -163,8 +167,10 @@ class LogScale extends Scale {
     // Fix #4158
     const originalScale = this._originalScale;
     const originalExtent = originalScale.getExtent();
-    this._fixMin && (extent[0] = fixRoundingError(extent[0], originalExtent[0]));
-    this._fixMax && (extent[1] = fixRoundingError(extent[1], originalExtent[1]));
+     // @ts-ignore
+    originalExtent._fixMin && (extent[0] = fixRoundingError(extent[0], originalExtent[0]));
+     // @ts-ignore
+    originalExtent._fixMax && (extent[1] = fixRoundingError(extent[1], originalExtent[1]));
 
     return extent;
   }
@@ -241,8 +247,11 @@ class LogScale extends Scale {
   }): void {
     intervalScaleProto.calcNiceExtent.call(this, opt);
 
-    this._fixMin = opt.fixMin;
-    this._fixMax = opt.fixMax;
+    const originalScale = this._originalScale;
+    // @ts-ignore
+    originalScale.__fixMin = opt.fixMin;
+    // @ts-ignore
+    originalScale.__fixMax = opt.fixMax;
   }
 
   parse(val: any): number {
