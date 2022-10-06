@@ -104,10 +104,10 @@ class LogScale extends Scale {
   getTicks(): ScaleTick[] {
     // const originalScale = this._originalScale;
     const extent = this._extent;
-    // const originalExtent = originalScale.getExtent();
+    const originalExtent = this._originalScale.getExtent();
 
     return zrUtil.map(
-      getLogTicks(this._originalScale.getExtent(), this.base, this._interval),
+      getLogTicks(originalExtent, this.base, this._interval),
       function (val) {
         let powVal:any;
         if (val < 0) {
@@ -119,11 +119,11 @@ class LogScale extends Scale {
         // Fix #4158
         powVal =
           val === extent[0] && this._fixMin
-            ? fixRoundingError(powVal, this._originalScale.getExtent()[0])
+            ? fixRoundingError(powVal, originalExtent[0])
             : powVal;
         powVal =
           val === extent[1] && this._fixMax
-            ? fixRoundingError(powVal, this._originalScale.getExtent()[1])
+            ? fixRoundingError(powVal, originalExtent[1])
             : powVal;
 
         return {
