@@ -12562,7 +12562,7 @@ function elementStateProxy(stateName, targetStates) {
 
   return state;
 }
-/**FI
+/**
  * Set hover style (namely "emphasis style") of element.
  * @param el Should not be `zrender/graphic/Group`.
  * @param focus 'self' | 'selfInSeries' | 'series'
@@ -21286,7 +21286,7 @@ var iterator = function () {
     current++;
     return result;
   }
-}(); ///////////////////////////////////////////////////////////
+}(); // -----------------------------------------------------------------------------
 // For stream debug (Should be commented out after used!)
 // @usage: printTask(this, 'begin');
 // @usage: printTask(this, null, {someExtraProp});
@@ -35004,14 +35004,97 @@ function getIntervalTicks(bottomUnitName, approxInterval, isUTC, extent) {
 
 Scale.registerClass(TimeScale);
 
+/*
+* Licensed to the Apache Software Foundation (ASF) under one
+* or more contributor license agreements.  See the NOTICE file
+* distributed with this work for additional information
+* regarding copyright ownership.  The ASF licenses this file
+* to you under the Apache License, Version 2.0 (the
+* "License"); you may not use this file except in compliance
+* with the License.  You may obtain a copy of the License at
+*
+*   http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing,
+* software distributed under the License is distributed on an
+* "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+* KIND, either express or implied.  See the License for the
+* specific language governing permissions and limitations
+* under the License.
+*/
+
+
+/**
+ * AUTO-GENERATED FILE. DO NOT MODIFY.
+ */
+
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * 'License'); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * 'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+var _this = undefined;
 var scaleProto = Scale.prototype; // FIXME:TS refactor: not good to call it directly with `this`?
 
 var intervalScaleProto = IntervalScale.prototype;
 var roundingErrorFix = round;
-var mathFloor = Math.floor;
-var mathCeil = Math.ceil;
 var mathPow$1 = Math.pow;
 var mathLog = Math.log;
+
+var getLogTicks = function (_extent, base, _interval) {
+  // Tornem a posar l'extent en format [num, num] (sense log).
+  var start = _extent[0];
+
+  if (start < 0) {
+    _extent[0] = round(-mathPow$1(base, -start) + 1);
+  } else {
+    _extent[0] = round(mathPow$1(base, start) - 1);
+  }
+
+  var end = _extent[1];
+
+  if (end < 0) {
+    _extent[1] = round(-mathPow$1(base, -end) + 1);
+  } else {
+    _extent[1] = round(mathPow$1(base, end) - 1);
+  }
+
+  var ticks = [];
+  var tick = _extent[0];
+
+  while (tick < _extent[1]) {
+    if (ticks.length !== 0) {
+      tick = tick + _interval;
+    }
+
+    ticks.push(tick);
+  } // Tornem a convertir els ticks en log(tick)
+
+
+  ticks = map(ticks, function (tick) {
+    if (tick < 0) {
+      tick = -(mathLog(-tick + 1) / mathLog(base));
+    } else {
+      tick = mathLog(tick + 1) / mathLog(base);
+    }
+
+    return tick;
+  }, _this);
+  return ticks;
+};
 
 var LogScale =
 /** @class */
@@ -35028,22 +35111,23 @@ function (_super) {
     _this._interval = 0;
     return _this;
   }
-  /**
-   * @param Whether expand the ticks to niced extent.
-   */
+
+  LogScale.prototype.getTicks = function () {
+    // const originalScale = this._originalScale;
+    var extent = this._extent; // const originalExtent = originalScale.getExtent();
+
+    return map(getLogTicks(this._originalScale.getExtent(), this.base, this._interval), function (val) {
+      var powVal;
+
+      if (val < 0) {
+        powVal = round(-mathPow$1(this.base, -val) + 1);
+      } else {
+        powVal = round(mathPow$1(this.base, val) - 1);
+      } // Fix #4158
 
 
-  LogScale.prototype.getTicks = function (expandToNicedExtent) {
-    var originalScale = this._originalScale;
-    var extent = this._extent;
-    var originalExtent = originalScale.getExtent();
-    var ticks = intervalScaleProto.getTicks.call(this, expandToNicedExtent);
-    return map(ticks, function (tick) {
-      var val = tick.value;
-      var powVal = round(mathPow$1(this.base, val)); // Fix #4158
-
-      powVal = val === extent[0] && this._fixMin ? fixRoundingError(powVal, originalExtent[0]) : powVal;
-      powVal = val === extent[1] && this._fixMax ? fixRoundingError(powVal, originalExtent[1]) : powVal;
+      powVal = val === extent[0] && this._fixMin ? fixRoundingError(powVal, this._originalScale.getExtent()[0]) : powVal;
+      powVal = val === extent[1] && this._fixMax ? fixRoundingError(powVal, this._originalScale.getExtent()[1]) : powVal;
       return {
         value: powVal
       };
@@ -35051,10 +35135,22 @@ function (_super) {
   };
 
   LogScale.prototype.setExtent = function (start, end) {
-    var base = mathLog(this.base); // log(-Infinity) is NaN, so safe guard here
+    var base = this.base; // log(-Infinity) is NaN, so safe guard here
 
-    start = mathLog(Math.max(0, start)) / base;
-    end = mathLog(Math.max(0, end)) / base;
+    if (start < 0) {
+      start = -(mathLog(-start + 1) / mathLog(base));
+    } else {
+      start = mathLog(start + 1) / mathLog(base);
+    }
+
+    if (end < 0) {
+      end = -(mathLog(-end + 1) / mathLog(base));
+    } else {
+      end = mathLog(end + 1) / mathLog(base);
+    }
+
+    this._originalScale.setExtent(start, end);
+
     intervalScaleProto.setExtent.call(this, start, end);
   };
   /**
@@ -35069,9 +35165,11 @@ function (_super) {
     extent[1] = mathPow$1(base, extent[1]); // Fix #4158
 
     var originalScale = this._originalScale;
-    var originalExtent = originalScale.getExtent();
-    this._fixMin && (extent[0] = fixRoundingError(extent[0], originalExtent[0]));
-    this._fixMax && (extent[1] = fixRoundingError(extent[1], originalExtent[1]));
+    var originalExtent = originalScale.getExtent(); // @ts-ignore
+
+    originalExtent._fixMin && (extent[0] = fixRoundingError(extent[0], originalExtent[0])); // @ts-ignore
+
+    originalExtent._fixMax && (extent[1] = fixRoundingError(extent[1], originalExtent[1]));
     return extent;
   };
 
@@ -35079,8 +35177,19 @@ function (_super) {
     this._originalScale.unionExtent(extent);
 
     var base = this.base;
-    extent[0] = mathLog(extent[0]) / mathLog(base);
-    extent[1] = mathLog(extent[1]) / mathLog(base);
+
+    if (extent[0] < 0) {
+      extent[0] = -(mathLog(-extent[0]) / mathLog(base));
+    } else {
+      extent[0] = mathLog(extent[0]) / mathLog(base);
+    }
+
+    if (extent[1] < 0) {
+      extent[1] = -(mathLog(-extent[1]) / mathLog(base));
+    } else {
+      extent[1] = mathLog(extent[1]) / mathLog(base);
+    }
+
     scaleProto.unionExtent.call(this, extent);
   };
 
@@ -35116,15 +35225,20 @@ function (_super) {
       interval *= 10;
     }
 
-    var niceExtent = [round(mathCeil(extent[0] / interval) * interval), round(mathFloor(extent[1] / interval) * interval)];
+    var niceExtent = [// numberUtil.round(mathCeil(extent[0] / interval) * interval),
+    // numberUtil.round(mathFloor(extent[1] / interval) * interval),
+    extent[0], extent[1]];
     this._interval = interval;
     this._niceExtent = niceExtent;
   };
 
   LogScale.prototype.calcNiceExtent = function (opt) {
     intervalScaleProto.calcNiceExtent.call(this, opt);
-    this._fixMin = opt.fixMin;
-    this._fixMax = opt.fixMax;
+    var originalScale = this._originalScale; // @ts-ignore
+
+    originalScale.__fixMin = opt.fixMin; // @ts-ignore
+
+    originalScale.__fixMax = opt.fixMax;
   };
 
   LogScale.prototype.parse = function (val) {
@@ -35158,6 +35272,19 @@ function fixRoundingError(val, originalVal) {
   return roundingErrorFix(val, getPrecision(originalVal));
 }
 
+each(['contain', 'normalize'], function (methodName) {
+  // @ts-ignore
+  LogScale.prototype[methodName] = function (val) {
+    if (val < 0) {
+      val = -(mathLog(-val + 1) / mathLog(this.base));
+    } else {
+      val = mathLog(val + 1) / mathLog(this.base);
+    } // @ts-ignore
+
+
+    return this._originalScale[methodName].call(this, val);
+  };
+});
 Scale.registerClass(LogScale);
 
 var ScaleRawExtentInfo =
@@ -35407,7 +35534,7 @@ function getScaleExtent(scale, model) {
   var ecModel = model.ecModel;
 
   if (ecModel && scaleType === 'time'
-  /*|| scaleType === 'interval' */
+  /* || scaleType === 'interval' */
   ) {
     var barSeriesModels = prepareLayoutBarSeries('bar', ecModel);
     var isBaseAxisAndHasBarSeries_1 = false;
@@ -41387,7 +41514,7 @@ function prepareDataCoordInfo(coordSys, data, valueOrigin) {
   var stackResultDim = data.getCalculationInfo('stackResultDimension');
 
   if (isDimensionStacked(data, dims[0]
-  /*, dims[1]*/
+  /* , dims[1] */
   )) {
     // jshint ignore:line
     stacked = true;
@@ -41395,7 +41522,7 @@ function prepareDataCoordInfo(coordSys, data, valueOrigin) {
   }
 
   if (isDimensionStacked(data, dims[1]
-  /*, dims[0]*/
+  /* , dims[0] */
   )) {
     // jshint ignore:line
     stacked = true;
@@ -43533,18 +43660,42 @@ function (_super) {
     });
   };
 
-  BaseBarSeriesModel.prototype.getMarkerPosition = function (value) {
+  BaseBarSeriesModel.prototype.getMarkerPosition = function (value, dims, startingAtTick) {
+    if (startingAtTick === void 0) {
+      startingAtTick = false;
+    }
+
     var coordSys = this.coordinateSystem;
 
     if (coordSys && coordSys.clampData) {
       // PENDING if clamp ?
-      var pt = coordSys.dataToPoint(coordSys.clampData(value));
-      var data = this.getData();
-      var offset = data.getLayout('offset');
-      var size = data.getLayout('size');
-      var offsetIndex = coordSys.getBaseAxis().isHorizontal() ? 0 : 1;
-      pt[offsetIndex] += offset + size / 2;
-      return pt;
+      var pt_1 = coordSys.dataToPoint(coordSys.clampData(value));
+
+      if (startingAtTick) {
+        each(coordSys.getAxes(), function (axis, idx) {
+          // If axis type is category, use tick coords instead
+          if (axis.type === 'category') {
+            var tickCoords = axis.getTicksCoords();
+            var tickIdx = coordSys.clampData(value)[idx]; // The index of rightmost tick of markArea is 1 larger than x1/y1 index
+
+            if (dims && (dims[idx] === 'x1' || dims[idx] === 'y1')) {
+              tickIdx += 1;
+            }
+
+            tickIdx > tickCoords.length - 1 && (tickIdx = tickCoords.length - 1);
+            tickIdx < 0 && (tickIdx = 0);
+            tickCoords[tickIdx] && (pt_1[idx] = axis.toGlobalCoord(tickCoords[tickIdx].coord));
+          }
+        });
+      } else {
+        var data = this.getData();
+        var offset = data.getLayout('offset');
+        var size = data.getLayout('size');
+        var offsetIndex = coordSys.getBaseAxis().isHorizontal() ? 0 : 1;
+        pt_1[offsetIndex] += offset + size / 2;
+      }
+
+      return pt_1;
     }
 
     return [NaN, NaN];
@@ -47762,7 +47913,7 @@ function () {
     var axesCount = {
       x: 0,
       y: 0
-    }; /// Create axis
+    }; // Create axis
 
     ecModel.eachComponent('xAxis', createAxisCreator('x'), this);
     ecModel.eachComponent('yAxis', createAxisCreator('y'), this);
@@ -47774,7 +47925,7 @@ function () {
       return;
     }
 
-    this._axesMap = axesMap; /// Create cartesian2d
+    this._axesMap = axesMap; // Create cartesian2d
 
     each(axesMap.x, function (xAxis, xAxisIndex) {
       each(axesMap.y, function (yAxis, yAxisIndex) {
@@ -51462,7 +51613,7 @@ function () {
 
 
   GeoSVGResource.prototype.useGraphic = function (hostKey
-  /*, nameMap: NameMap */
+  /* , nameMap: NameMap */
   ) {
     var usedRootMap = this._usedGraphicMap;
     var svgGraphic = usedRootMap.get(hostKey);
@@ -51636,7 +51787,7 @@ var coordsOffsetMap = {
   '广东': [0, -10],
   '香港': [10, 5],
   '澳门': [-10, 10],
-  //'北京': [-10, 0],
+  // '北京': [-10, 0],
   '天津': [5, 5]
 };
 function fixTextCoords(mapType, region) {
@@ -52936,7 +53087,7 @@ function (_super) {
     // for geoSVG source: 1,
     // for geoJSON source: 0.75.
     aspectScale: null,
-    ///// Layout with center and size
+    // Layout with center and size
     // If you wan't to put map in a fixed size box with right aspect ratio
     // This two properties may more conveninet
     // layoutCenter: [50%, 50%]
@@ -53895,7 +54046,7 @@ function (_super) {
     // for geoSVG source: 1,
     // for geoJSON source: 0.75.
     aspectScale: null,
-    ///// Layout with center and size
+    // /// Layout with center and size
     // If you wan't to put map in a fixed size box with right aspect ratio
     // This two properties may more conveninet
     // layoutCenter: [50%, 50%]
@@ -55709,7 +55860,7 @@ function (_super) {
 
 
   TreeSeriesModel.prototype.getInitialData = function (option) {
-    //create an virtual root
+    // create a virtual root
     var root = {
       name: option.name,
       children: option.data
@@ -56370,7 +56521,7 @@ function (_super) {
       },
       emphasis: {
         itemStyle: {
-          color: 'rgba(0,0,0,0.9)' //'#5793f3',
+          color: 'rgba(0,0,0,0.9)' // '#5793f3',
 
         }
       }
@@ -63854,8 +64005,8 @@ function restrict(value, extend) {
 var each$5 = each;
 var mathMin$8 = Math.min;
 var mathMax$8 = Math.max;
-var mathFloor$1 = Math.floor;
-var mathCeil$1 = Math.ceil;
+var mathFloor = Math.floor;
+var mathCeil = Math.ceil;
 var round$3 = round;
 var PI$7 = Math.PI;
 
@@ -63981,7 +64132,7 @@ function () {
 
     if (!axisExpandWindow) {
       winSize = restrict$1(axisExpandWidth * (axisExpandCount - 1), layoutExtent);
-      var axisExpandCenter = parallelModel.get('axisExpandCenter') || mathFloor$1(axisCount / 2);
+      var axisExpandCenter = parallelModel.get('axisExpandCenter') || mathFloor(axisCount / 2);
       axisExpandWindow = [axisExpandWidth * axisExpandCenter - winSize / 2];
       axisExpandWindow[1] = axisExpandWindow[0] + winSize;
     } else {
@@ -63993,7 +64144,7 @@ function () {
 
     axisCollapseWidth < 3 && (axisCollapseWidth = 0); // Find the first and last indices > ewin[0] and < ewin[1].
 
-    var winInnerIndices = [mathFloor$1(round$3(axisExpandWindow[0] / axisExpandWidth, 1)) + 1, mathCeil$1(round$3(axisExpandWindow[1] / axisExpandWidth, 1)) - 1]; // Pos in ec coordinates.
+    var winInnerIndices = [mathFloor(round$3(axisExpandWindow[0] / axisExpandWidth, 1)) + 1, mathCeil(round$3(axisExpandWindow[1] / axisExpandWidth, 1)) - 1]; // Pos in ec coordinates.
 
     var axisExpandWindow0Pos = axisCollapseWidth / axisExpandWidth * axisExpandWindow[0];
     return {
@@ -65970,7 +66121,7 @@ function computeNodeBreadths(nodes, edges, nodeWidth, width, height, orient, nod
   // the value is 0, otherwise it is 1.
   var remainEdges = []; // Storage each node's indegree.
 
-  var indegreeArr = []; //Used to storage the node with indegree is equal to 0.
+  var indegreeArr = []; // Used to storage the node with indegree is equal to 0.
 
   var zeroIndegrees = [];
   var nextTargetNode = [];
@@ -66801,50 +66952,6 @@ function transInit(points, dim, itemLayout) {
   });
 }
 
-/*
-* Licensed to the Apache Software Foundation (ASF) under one
-* or more contributor license agreements.  See the NOTICE file
-* distributed with this work for additional information
-* regarding copyright ownership.  The ASF licenses this file
-* to you under the Apache License, Version 2.0 (the
-* "License"); you may not use this file except in compliance
-* with the License.  You may obtain a copy of the License at
-*
-*   http://www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing,
-* software distributed under the License is distributed on an
-* "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-* KIND, either express or implied.  See the License for the
-* specific language governing permissions and limitations
-* under the License.
-*/
-
-
-/**
- * AUTO-GENERATED FILE. DO NOT MODIFY.
- */
-
-/*
-* Licensed to the Apache Software Foundation (ASF) under one
-* or more contributor license agreements.  See the NOTICE file
-* distributed with this work for additional information
-* regarding copyright ownership.  The ASF licenses this file
-* to you under the Apache License, Version 2.0 (the
-* "License"); you may not use this file except in compliance
-* with the License.  You may obtain a copy of the License at
-*
-*   http://www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing,
-* software distributed under the License is distributed on an
-* "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-* KIND, either express or implied.  See the License for the
-* specific language governing permissions and limitations
-* under the License.
-*/
-function boxplotVisual(ecModel, api) {}
-
 var each$6 = each;
 function boxplotLayout(ecModel) {
   var groupResult = groupSeriesByAxis(ecModel);
@@ -67087,7 +67194,6 @@ var boxplotTransform = {
 function install$j(registers) {
   registers.registerSeriesModel(BoxplotSeriesModel);
   registers.registerChartView(BoxplotView);
-  registers.registerVisual(boxplotVisual);
   registers.registerLayout(boxplotLayout);
   registers.registerTransform(boxplotTransform);
 }
@@ -76578,7 +76684,7 @@ function barLayoutPolar(seriesType, ecModel, api) {
     var valueDim = data.mapDimension(valueAxis.dim);
     var baseDim = data.mapDimension(baseAxis.dim);
     var stacked = isDimensionStacked(data, valueDim
-    /*, baseDim*/
+    /* , baseDim */
     );
     var clampLayout = baseAxis.dim !== 'radius' || !seriesModel.get('roundCap', true);
     var valueAxisStart = valueAxis.dataToCoord(0);
@@ -79242,7 +79348,7 @@ function (_super) {
   };
 
   DataZoomModel.prototype.mergeOption = function (newOption) {
-    var inputRawOption = retrieveRawOption(newOption); //FIX #2591
+    var inputRawOption = retrieveRawOption(newOption); // FIX #2591
 
     merge(this.option, newOption, true);
     merge(this.settledOption, inputRawOption, true);
@@ -79878,7 +79984,7 @@ function () {
       var seriesData = seriesModel.getData();
       var dataDims = seriesData.mapDimensionsAll(axisDim);
 
-      if (!dataDims.length) {
+      if (!dataDims.length || seriesModel.subType === 'line') {
         return;
       }
 
@@ -85324,7 +85430,7 @@ function (_super) {
     var data = timelineModel.getData(); // Show all ticks, despite ignoring strategy.
 
     var ticks = axis.scale.getTicks();
-    this._tickSymbols = []; // The value is dataIndex, see the costomized scale.
+    this._tickSymbols = []; // The value is dataIndex, see the customized scale.
 
     each(ticks, function (tick) {
       var tickCoord = axis.dataToCoord(tick.value);
@@ -85367,7 +85473,7 @@ function (_super) {
     var labels = axis.getViewLabels();
     this._tickLabels = [];
     each(labels, function (labelItem) {
-      // The tickValue is dataIndex, see the costomized scale.
+      // The tickValue is dataIndex, see the customized scale.
       var dataIndex = labelItem.tickValue;
       var itemModel = data.getItemModel(dataIndex);
       var normalLabelModel = itemModel.getModel('label');
@@ -85481,9 +85587,12 @@ function (_super) {
 
     this._currentPointer.markRedraw();
 
-    this._progressLine.shape.x2 = toCoord;
+    var progressLine = this._progressLine;
 
-    this._progressLine.dirty();
+    if (progressLine) {
+      progressLine.shape.x2 = toCoord;
+      progressLine.dirty();
+    }
 
     var targetDataIndex = this._findNearestTick(toCoord);
 
@@ -86025,8 +86134,8 @@ function (_super) {
     z: 5,
     symbol: 'pin',
     symbolSize: 50,
-    //symbolRotate: 0,
-    //symbolOffset: [0, 0]
+    // symbolRotate: 0,
+    // symbolOffset: [0, 0]
     tooltip: {
       trigger: 'item'
     },
@@ -86057,7 +86166,7 @@ function hasXAndY(item) {
 function markerTypeCalculatorWithExtent(markerType, data, otherDataDim, targetDataDim, otherCoordIndex, targetCoordIndex) {
   var coordArr = [];
   var stacked = isDimensionStacked(data, targetDataDim
-  /*, otherDataDim*/
+  /* , otherDataDim */
   );
   var calcDataDim = stacked ? data.getCalculationInfo('stackResultDimension') : targetDataDim;
   var value = numCalculate(data, calcDataDim, markerType);
@@ -86447,7 +86556,7 @@ function (_super) {
     z: 5,
     symbol: ['circle', 'arrow'],
     symbolSize: [8, 16],
-    //symbolRotate: 0,
+    // symbolRotate: 0,
     symbolOffset: 0,
     precision: 2,
     tooltip: {
@@ -86936,11 +87045,11 @@ function markAreaFilter(coordSys, item) {
     // }
     if (fromCoord && toCoord && (ifMarkAreaHasOnlyDim(1, fromCoord, toCoord) || ifMarkAreaHasOnlyDim(0, fromCoord, toCoord))) {
       return true;
-    } //Directly returning true may also do the work,
-    //because markArea will not be shown automatically
-    //when it's not included in coordinate system.
-    //But filtering ahead can avoid keeping rendering markArea
-    //when there are too many of them.
+    } // Directly returning true may also do the work,
+    // because markArea will not be shown automatically
+    // when it's not included in coordinate system.
+    // But filtering ahead can avoid keeping rendering markArea
+    // when there are too many of them.
 
 
     return zoneFilter(coordSys, item0, item1);
@@ -86962,8 +87071,28 @@ function getSingleMarkerEndPoint(data, idx, dims, seriesModel, api) {
   } else {
     // Chart like bar may have there own marker positioning logic
     if (seriesModel.getMarkerPosition) {
-      // Use the getMarkerPosition
-      point = seriesModel.getMarkerPosition(data.getValues(dims, idx));
+      // Consider the case that user input the right-bottom point first
+      // Pick the larger x and y as 'x1' and 'y1'
+      var pointValue0 = data.getValues(['x0', 'y0'], idx);
+      var pointValue1 = data.getValues(['x1', 'y1'], idx);
+      var clampPointValue0 = coordSys.clampData(pointValue0);
+      var clampPointValue1 = coordSys.clampData(pointValue1);
+      var pointValue = [];
+
+      if (dims[0] === 'x0') {
+        pointValue[0] = clampPointValue0[0] > clampPointValue1[0] ? pointValue1[0] : pointValue0[0];
+      } else {
+        pointValue[0] = clampPointValue0[0] > clampPointValue1[0] ? pointValue0[0] : pointValue1[0];
+      }
+
+      if (dims[1] === 'y0') {
+        pointValue[1] = clampPointValue0[1] > clampPointValue1[1] ? pointValue1[1] : pointValue0[1];
+      } else {
+        pointValue[1] = clampPointValue0[1] > clampPointValue1[1] ? pointValue0[1] : pointValue1[1];
+      } // Use the getMarkerPoisition
+
+
+      point = seriesModel.getMarkerPosition(pointValue, dims, true);
     } else {
       var x = data.get(dims[0], idx);
       var y = data.get(dims[1], idx);
@@ -87337,6 +87466,7 @@ function (_super) {
     // which is convinient for user preparing option.
 
     var rawData = this.get('data') || potentialData;
+    var legendNameMap = createHashMap();
     var legendData = map(rawData, function (dataItem) {
       // Can be string or number
       if (isString(dataItem) || isNumber(dataItem)) {
@@ -87345,6 +87475,12 @@ function (_super) {
         };
       }
 
+      if (legendNameMap.get(dataItem.name)) {
+        // remove legend name duplicate
+        return null;
+      }
+
+      legendNameMap.set(dataItem.name, true);
       return new Model(dataItem, this, this.ecModel);
     }, this);
     /**
@@ -87352,7 +87488,9 @@ function (_super) {
      * @private
      */
 
-    this._data = legendData;
+    this._data = filter(legendData, function (item) {
+      return !!item;
+    });
   };
 
   LegendModel.prototype.getData = function () {
@@ -87840,7 +87978,7 @@ function (_super) {
         selectorPos[orientIdx] += contentRect[wh] + selectorButtonGap;
       } else {
         contentPos[orientIdx] += selectorRect[wh] + selectorButtonGap;
-      } //Always align selector to content as 'middle'
+      } // Always align selector to content as 'middle'
 
 
       selectorPos[1 - orientIdx] += contentRect[hw] / 2 - selectorRect[hw] / 2;

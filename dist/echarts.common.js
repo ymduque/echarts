@@ -34726,10 +34726,6 @@
         _this._interval = 0;
         return _this;
       }
-      /**
-       * @param Whether expand the ticks to niced extent.
-       */
-
 
       LogScale.prototype.getTicks = function () {
         // const originalScale = this._originalScale;
