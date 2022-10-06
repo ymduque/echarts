@@ -100,9 +100,7 @@ class LogScale extends Scale {
   // FIXME:TS actually used by `IntervalScale`
   private _niceExtent: [number, number];
 
-  /**
-   * @param Whether expand the ticks to niced extent.
-   */
+
   getTicks(): ScaleTick[] {
     // const originalScale = this._originalScale;
     const extent = this._extent;
