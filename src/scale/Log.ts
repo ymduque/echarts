@@ -104,12 +104,12 @@ class LogScale extends Scale {
    * @param Whether expand the ticks to niced extent.
    */
   getTicks(): ScaleTick[] {
-    const originalScale = this._originalScale;
+    // const originalScale = this._originalScale;
     const extent = this._extent;
-    const originalExtent = originalScale.getExtent();
+    // const originalExtent = originalScale.getExtent();
 
     return zrUtil.map(
-      getLogTicks(originalExtent, this.base, this._interval),
+      getLogTicks(this._originalScale.getExtent(), this.base, this._interval),
       function (val) {
         let powVal:any;
         if (val < 0) {
@@ -121,11 +121,11 @@ class LogScale extends Scale {
         // Fix #4158
         powVal =
           val === extent[0] && this._fixMin
-            ? fixRoundingError(powVal, originalExtent[0])
+            ? fixRoundingError(powVal, this._originalScale.getExtent()[0])
             : powVal;
         powVal =
           val === extent[1] && this._fixMax
-            ? fixRoundingError(powVal, originalExtent[1])
+            ? fixRoundingError(powVal, this._originalScale.getExtent()[1])
             : powVal;
 
         return {
