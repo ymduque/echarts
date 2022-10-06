@@ -33647,14 +33647,14 @@
      * distributed with this work for additional information
      * regarding copyright ownership.  The ASF licenses this file
      * to you under the Apache License, Version 2.0 (the
-     * "License"); you may not use this file except in compliance
+     * 'License'); you may not use this file except in compliance
      * with the License.  You may obtain a copy of the License at
      *
      *   http://www.apache.org/licenses/LICENSE-2.0
      *
      * Unless required by applicable law or agreed to in writing,
      * software distributed under the License is distributed on an
-     * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+     * 'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
      * KIND, either express or implied.  See the License for the
      * specific language governing permissions and limitations
      * under the License.
@@ -33717,7 +33717,7 @@
       function LogScale() {
         var _this = _super !== null && _super.apply(this, arguments) || this;
 
-        _this.type = "log";
+        _this.type = 'log';
         _this.base = 10;
         _this._originalScale = new IntervalScale(); // FIXME:TS actually used by `IntervalScale`
 
@@ -33729,22 +33729,22 @@
        */
 
 
-      LogScale.prototype.getTicks = function (expandToNicedExtent) {
-        var originalScale = this._originalScale;
-        var extent = this._extent;
-        var originalExtent = originalScale.getExtent();
-        var ticks = intervalScaleProto.getTicks.call(this, expandToNicedExtent);
-        return map(getLogTicks(ticks, this.base, this._interval), function (tick) {
-          var val = tick.value;
-          var powVal = round(mathPow$1(this.base, val));
+      LogScale.prototype.getTicks = function () {
+        // const originalScale = this._originalScale;
+        var extent = this._extent; // const originalExtent = originalScale.getExtent();
+
+        return map(getLogTicks(this._originalScale.getExtent(), this.base, this._interval), function (val) {
+          var powVal;
 
           if (val < 0) {
-            powVal = round(-mathPow$1(this.base, val));
+            powVal = round(-mathPow$1(this.base, -val) + 1);
+          } else {
+            powVal = round(mathPow$1(this.base, val) - 1);
           } // Fix #4158
 
 
-          powVal = val === extent[0] && this._fixMin ? fixRoundingError(powVal, originalExtent[0]) : powVal;
-          powVal = val === extent[1] && this._fixMax ? fixRoundingError(powVal, originalExtent[1]) : powVal;
+          powVal = val === extent[0] && this._fixMin ? fixRoundingError(powVal, this._originalScale.getExtent()[0]) : powVal;
+          powVal = val === extent[1] && this._fixMax ? fixRoundingError(powVal, this._originalScale.getExtent()[1]) : powVal;
           return {
             value: powVal
           };
@@ -33752,19 +33752,21 @@
       };
 
       LogScale.prototype.setExtent = function (start, end) {
-        var base = mathLog(this.base); // log(-Infinity) is NaN, so safe guard here
+        var base = this.base; // log(-Infinity) is NaN, so safe guard here
 
         if (start < 0) {
-          start = -(mathLog(Math.max(0, start)) / base);
+          start = -(mathLog(-start + 1) / mathLog(base));
         } else {
-          start = mathLog(Math.max(0, start)) / base;
+          start = mathLog(start + 1) / mathLog(base);
         }
 
         if (end < 0) {
-          end = -(mathLog(Math.max(0, end)) / base);
+          end = -(mathLog(-end + 1) / mathLog(base));
         } else {
-          end = mathLog(Math.max(0, end)) / base;
+          end = mathLog(end + 1) / mathLog(base);
         }
+
+        this._originalScale.setExtent(start, end);
 
         intervalScaleProto.setExtent.call(this, start, end);
       };
@@ -33780,9 +33782,11 @@
         extent[1] = mathPow$1(base, extent[1]); // Fix #4158
 
         var originalScale = this._originalScale;
-        var originalExtent = originalScale.getExtent();
-        this._fixMin && (extent[0] = fixRoundingError(extent[0], originalExtent[0]));
-        this._fixMax && (extent[1] = fixRoundingError(extent[1], originalExtent[1]));
+        var originalExtent = originalScale.getExtent(); // @ts-ignore
+
+        originalExtent._fixMin && (extent[0] = fixRoundingError(extent[0], originalExtent[0])); // @ts-ignore
+
+        originalExtent._fixMax && (extent[1] = fixRoundingError(extent[1], originalExtent[1]));
         return extent;
       };
 
@@ -33792,12 +33796,17 @@
         var base = this.base;
 
         if (extent[0] < 0) {
-          extent[0] = -(mathLog(extent[0]) / mathLog(base));
+          extent[0] = -(mathLog(-extent[0]) / mathLog(base));
         } else {
           extent[0] = mathLog(extent[0]) / mathLog(base);
         }
 
-        extent[1] = mathLog(extent[1]) / mathLog(base);
+        if (extent[1] < 0) {
+          extent[1] = -(mathLog(-extent[1]) / mathLog(base));
+        } else {
+          extent[1] = mathLog(extent[1]) / mathLog(base);
+        }
+
         scaleProto.unionExtent.call(this, extent);
       };
 
@@ -33833,8 +33842,8 @@
           interval *= 10;
         }
 
-        var niceExtent = [//numberUtil.round(mathCeil(extent[0] / interval) * interval),
-        //numberUtil.round(mathFloor(extent[1] / interval) * interval),
+        var niceExtent = [// numberUtil.round(mathCeil(extent[0] / interval) * interval),
+        // numberUtil.round(mathFloor(extent[1] / interval) * interval),
         extent[0], extent[1]];
         this._interval = interval;
         this._niceExtent = niceExtent;
@@ -33842,8 +33851,11 @@
 
       LogScale.prototype.calcNiceExtent = function (opt) {
         intervalScaleProto.calcNiceExtent.call(this, opt);
-        this._fixMin = opt.fixMin;
-        this._fixMax = opt.fixMax;
+        var originalScale = this._originalScale; // @ts-ignore
+
+        originalScale.__fixMin = opt.fixMin; // @ts-ignore
+
+        originalScale.__fixMax = opt.fixMax;
       };
 
       LogScale.prototype.parse = function (val) {
@@ -33865,7 +33877,7 @@
         return mathPow$1(this.base, val);
       };
 
-      LogScale.type = "log";
+      LogScale.type = 'log';
       return LogScale;
     }(Scale);
 
@@ -33877,6 +33889,19 @@
       return roundingErrorFix(val, getPrecision(originalVal));
     }
 
+    each(['contain', 'normalize'], function (methodName) {
+      // @ts-ignore
+      LogScale.prototype[methodName] = function (val) {
+        if (val < 0) {
+          val = -(mathLog(-val + 1) / mathLog(this.base));
+        } else {
+          val = mathLog(val + 1) / mathLog(this.base);
+        } // @ts-ignore
+
+
+        return this._originalScale[methodName].call(this, val);
+      };
+    });
     Scale.registerClass(LogScale);
 
     var ScaleRawExtentInfo =
